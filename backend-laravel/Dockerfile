@@ -1,4 +1,4 @@
-FROM php:8.3-cli-alpine
+FROM php:8.4-cli-alpine
 
 # Install system dependencies and PHP extensions
 RUN apk add --no-cache \
@@ -19,7 +19,7 @@ WORKDIR /app
 COPY . /app
 
 # Install PHP production dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
 
 # Ensure storage and cache permissions
 RUN chmod -R 777 storage bootstrap/cache && chmod +x docker-entrypoint.sh

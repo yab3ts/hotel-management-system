@@ -26,9 +26,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Guard: Prevent running demo seeder in production
-        if (app()->isProduction()) {
-            throw new \RuntimeException("Seeding demo accounts and test data is strictly forbidden in production environments.");
+        // Guard: Prevent running demo seeder in production unless DEMO_MODE is explicitly enabled
+        if (app()->isProduction() && !config('app.demo_mode')) {
+            throw new \RuntimeException("Seeding demo accounts and test data is strictly forbidden in production environments unless DEMO_MODE=true is set.");
         }
 
         // 1. Create Tenant (Restaurant Brand)
