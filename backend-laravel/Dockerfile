@@ -22,8 +22,8 @@ COPY . /app
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Ensure storage and cache permissions
-RUN chmod -R 777 storage bootstrap/cache
+RUN chmod -R 777 storage bootstrap/cache && chmod +x docker-entrypoint.sh
 
 EXPOSE 8000
 
-CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
+CMD ["sh", "docker-entrypoint.sh"]
