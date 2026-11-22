@@ -1,5 +1,22 @@
 // src/lib/api.ts
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const rawApiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').trim();
+
+function normalizeApiUrl(url: string): string {
+  let clean = url.trim();
+  // If the user forgot http:// or https:// (e.g. hotel-management-system-production-18fef117.up.railway.app), prepend https://
+  if (!clean.startsWith('http://') && !clean.startsWith('https://') && !clean.startsWith('/')) {
+    clean = `https://${clean}`;
+  }
+  // Strip trailing slashes
+  clean = clean.replace(/\/+$/, '');
+  // Ensure it ends with /api
+  if (!clean.endsWith('/api')) {
+    clean = `${clean}/api`;
+  }
+  return clean;
+}
+
+export const API_URL = normalizeApiUrl(rawApiUrl);
 
 export interface StoredUser {
   id: string;
