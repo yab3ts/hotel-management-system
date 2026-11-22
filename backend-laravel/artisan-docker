@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Helper script to run php artisan via docker without needing PHP installed locally
+docker run --rm -it -u $(id -u):$(id -g) -e HOME=/tmp -v "$(pwd)":/app -w /app composer:2 php artisan "$@"

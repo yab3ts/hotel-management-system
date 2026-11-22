@@ -4,6 +4,7 @@ import { Plus, Image, DollarSign, Tag, FileText, Utensils } from "lucide-react";
 import { KitchenLayout } from "@/components/KitchenLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 const categories = ["Breakfast", "Lunch", "Dinner", "Drinks", "Desserts", "Sides", "Specials"];
 
@@ -17,14 +18,25 @@ export default function KitchenCreateDish() {
     tags: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.price) {
+    if (!form.name.trim() || !form.price) {
       toast({ title: "Missing fields", description: "Name and price are required.", variant: "destructive" });
       return;
     }
-    toast({ title: "Dish Created!", description: `${form.name} has been added to the menu.` });
-    setForm({ name: "", category: "Lunch", price: "", description: "", emoji: "🍽️", tags: "" });
+    try {
+      await api.post('/menu', {
+        name: form.name.trim(),
+        price: parseFloat(form.price),
+        category: form.category,
+        description: form.description.trim() || undefined,
+        is_available: true,
+      });
+      toast({ title: "Dish Published!", description: `${form.name} is now live on all menus.` });
+      setForm({ name: "", category: "Lunch", price: "", description: "", emoji: "🍽️", tags: "" });
+    } catch (err: any) {
+      toast({ title: "Failed to publish dish", description: err.message || "Could not save dish.", variant: "destructive" });
+    }
   };
 
   const emojiOptions = ["🍽️", "🥩", "🐟", "🍕", "🍝", "🥑", "🥞", "☕", "🍰", "🥗", "🍳", "🦞", "🐠", "🍵", "🍫", "🍖", "🍞", "🥭", "🍮", "🍗", "🧄", "🍄", "🍹", "🍣", "🐑", "🍠", "🍸", "🍔", "🌮", "🍜"];

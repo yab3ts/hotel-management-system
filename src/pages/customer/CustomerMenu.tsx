@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Star, ShoppingCart, Heart, Plus, Minus, X, CalendarDays, Check, ArrowRight, UtensilsCrossed } from "lucide-react";
+import { Search, Star, ShoppingCart, Heart, Plus, Minus, X, CalendarDays, Check, ArrowRight, UtensilsCrossed, Receipt, User, Clock, Sparkles, AlertCircle, RefreshCw } from "lucide-react";
 import { CustomerLayout } from "@/components/CustomerLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { toast } from "@/hooks/use-toast";
+import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { api } from "@/lib/api";
 
 const categories = ["All", "Breakfast", "Lunch", "Dinner", "Drinks", "Desserts", "Sides", "Specials"];
 
@@ -52,6 +54,12 @@ const tableZones = [
 ];
 
 export default function CustomerMenu() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const qrToken = searchParams.get("token") || sessionStorage.getItem("cafex_active_qr_token");
+  const qrTable = searchParams.get("table") || sessionStorage.getItem("cafex_active_table_number");
+
   const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -59,8 +67,19 @@ export default function CustomerMenu() {
   const [cartOpen, setCartOpen] = useState(false);
   const [quantityModal, setQuantityModal] = useState<{ name: string; emoji: string; price: number } | null>(null);
   const [tempQty, setTempQty] = useState(1);
+  const [itemNote, setItemNote] = useState("");
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+
+  // Guest details for QR dining
+  const [guestName, setGuestName] = useState(() => {
+    return localStorage.getItem("cafex_guest_name") || "";
+  });
+  const [orderNotes, setOrderNotes] = useState("");
+  const [paymentChoice, setPaymentChoice] = useState<"pay_later" | "pay_now">("pay_later");
+  const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [orderSubmissionError, setOrderSubmissionError] = useState<string | null>(null);
+
   // After adding: show "Add More" or "View Cart"
   const [justAdded, setJustAdded] = useState<string | null>(null);
   // Post-order: ask about table reservation
@@ -79,6 +98,7 @@ export default function CustomerMenu() {
   const openQuantityModal = (item: { name: string; emoji: string; price: number }) => {
     setQuantityModal(item);
     setTempQty(1);
+    setItemNote("");
     setJustAdded(null);
   };
 
@@ -87,9 +107,9 @@ export default function CustomerMenu() {
     setCart((prev) => {
       const existing = prev.find((c) => c.name === quantityModal.name);
       if (existing) {
-        return prev.map((c) => c.name === quantityModal.name ? { ...c, quantity: c.quantity + tempQty } : c);
+        return prev.map((c) => c.name === quantityModal.name ? { ...c, quantity: c.quantity + tempQty, notes: itemNote || c.notes } : c);
       }
-      return [...prev, { name: quantityModal.name, emoji: quantityModal.emoji, price: quantityModal.price, quantity: tempQty, notes: "" }];
+      return [...prev, { name: quantityModal.name, emoji: quantityModal.emoji, price: quantityModal.price, quantity: tempQty, notes: itemNote }];
     });
     setJustAdded(quantityModal.name);
   };
@@ -107,12 +127,59 @@ export default function CustomerMenu() {
   const cartTotal = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
   const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
 
-  const placeOrder = () => {
-    setOrderSummary({ count: cartCount, total: cartTotal });
-    setCart([]);
-    setCheckoutOpen(false);
-    setCartOpen(false);
-    setOrderPlaced(true);
+  const placeOrder = async () => {
+    if (qrToken) {
+      try {
+        setSubmittingOrder(true);
+        setOrderSubmissionError(null);
+        const nameToUse = guestName.trim() || localStorage.getItem("cafex_guest_name") || "Guest";
+        if (guestName.trim()) {
+          localStorage.setItem("cafex_guest_name", guestName.trim());
+        }
+
+        const itemsPayload = cart.map((c) => ({
+          item_name: c.name,
+          unit_price: c.price,
+          quantity: c.quantity,
+          special_notes: c.notes || undefined,
+        }));
+
+        await api.placeQrOrder(qrToken, {
+          guest_name: nameToUse,
+          items: itemsPayload,
+          notes: orderNotes.trim() || undefined,
+          payment_choice: paymentChoice,
+        });
+
+        toast({
+          title: "Order Sent to Kitchen! 🍳",
+          description: `Order placed for ${qrTable || "your table"}. Live tracker active!`,
+        });
+
+        setCart([]);
+        setCheckoutOpen(false);
+        setCartOpen(false);
+        setOrderSubmissionError(null);
+        navigate(`/t/${qrToken}/tab`);
+        return;
+      } catch (err: any) {
+        const errorMsg = err.message || "Could not place order. Please check connection and retry.";
+        setOrderSubmissionError(errorMsg);
+        toast({
+          title: "Order Placement Failed",
+          description: errorMsg,
+          variant: "destructive",
+        });
+      } finally {
+        setSubmittingOrder(false);
+      }
+    } else {
+      setOrderSummary({ count: cartCount, total: cartTotal });
+      setCart([]);
+      setCheckoutOpen(false);
+      setCartOpen(false);
+      setOrderPlaced(true);
+    }
   };
 
   const confirmReservation = () => {
@@ -142,6 +209,28 @@ export default function CustomerMenu() {
 
   return (
     <CustomerLayout>
+      {qrTable && (
+        <div className="mb-4 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/30 rounded-2xl p-3 px-4 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <div>
+              <span className="text-xs font-bold text-amber-300">
+                Dine-in at {qrTable}
+              </span>
+              <span className="text-[11px] text-muted-foreground ml-2 hidden sm:inline">
+                Co-diners share this running tab
+              </span>
+            </div>
+          </div>
+          <Link
+            to={qrToken ? `/t/${qrToken}/tab` : "#"}
+            className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 rounded-xl border border-amber-500/20"
+          >
+            <Receipt className="w-3.5 h-3.5" /> View Tab
+          </Link>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-2">
         <PageHeader title="Menu" subtitle="Explore our delicious offerings" />
         <motion.button
@@ -265,6 +354,15 @@ export default function CustomerMenu() {
                       <motion.button whileTap={{ scale: 0.9 }} onClick={() => setTempQty(tempQty + 1)} className="w-10 h-10 rounded-xl bg-secondary text-secondary-foreground flex items-center justify-center">
                         <Plus className="w-4 h-4" />
                       </motion.button>
+                    </div>
+                    <div className="mb-5">
+                      <input
+                        type="text"
+                        value={itemNote}
+                        onChange={(e) => setItemNote(e.target.value)}
+                        placeholder='Special instructions (e.g. "no onions", "extra sauce")'
+                        className="w-full px-3 py-2 rounded-xl bg-secondary border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
                     </div>
                     <div className="flex gap-3">
                       <button onClick={() => setQuantityModal(null)} className="flex-1 py-3 rounded-xl border border-border text-muted-foreground text-sm font-semibold hover:bg-muted transition-colors">Cancel</button>
@@ -438,14 +536,117 @@ export default function CustomerMenu() {
                     <span className="font-display font-bold text-lg text-primary">${cartTotal}</span>
                   </div>
                 </div>
+
+                {/* Dine-In Table & Guest Customizations */}
+                {qrTable && (
+                  <div className="space-y-3 mb-5 p-3.5 bg-secondary/40 border border-border/80 rounded-xl text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-foreground flex items-center gap-1.5">
+                        <UtensilsCrossed className="w-3.5 h-3.5 text-primary" /> Dine-in Order
+                      </span>
+                      <span className="font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                        {qrTable}
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                        Your Name (printed on kitchen ticket):
+                      </label>
+                      <input
+                        type="text"
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                        placeholder="e.g. Abel, Sara, Alex"
+                        className="w-full px-3 py-2 rounded-lg bg-background border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                        Table Notes / Allergies:
+                      </label>
+                      <input
+                        type="text"
+                        value={orderNotes}
+                        onChange={(e) => setOrderNotes(e.target.value)}
+                        placeholder="e.g. Please bring water first, gluten allergy"
+                        className="w-full px-3 py-2 rounded-lg bg-background border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                        Payment Preference:
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentChoice("pay_later")}
+                          className={`py-1.5 px-2 rounded-lg border text-[11px] font-semibold transition-all ${
+                            paymentChoice === "pay_later"
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border"
+                          }`}
+                        >
+                          Pay Later (Table/Counter)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentChoice("pay_now")}
+                          className={`py-1.5 px-2 rounded-lg border text-[11px] font-semibold transition-all ${
+                            paymentChoice === "pay_now"
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border"
+                          }`}
+                        >
+                          Pay Now (Card/Mobile)
+                        </button>
+                      </div>
+                    </div>
+
+                    {orderSubmissionError && (
+                      <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>Order Not Sent</span>
+                        </div>
+                        <p className="text-[11px] leading-tight text-destructive/90">
+                          {orderSubmissionError}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground pt-1">
+                          Don't worry — your cart items are preserved. Tap below to retry sending.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-3">
                   <button onClick={() => setCheckoutOpen(false)} className="flex-1 py-3 rounded-xl border border-border text-muted-foreground text-sm font-semibold hover:bg-muted transition-colors">Back</button>
                   <motion.button
                     whileTap={{ scale: 0.95 }}
+                    disabled={submittingOrder}
                     onClick={placeOrder}
-                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2"
+                    className={`flex-1 py-3 rounded-xl text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
+                      orderSubmissionError
+                        ? "bg-amber-600 hover:bg-amber-700 text-white"
+                        : "bg-primary"
+                    } disabled:opacity-50`}
                   >
-                    <Check className="w-4 h-4" /> Place Order
+                    {submittingOrder ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Sending...
+                      </>
+                    ) : orderSubmissionError ? (
+                      <>
+                        <RefreshCw className="w-4 h-4" /> Retry Sending Order
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" /> Place Order
+                      </>
+                    )}
                   </motion.button>
                 </div>
               </motion.div>

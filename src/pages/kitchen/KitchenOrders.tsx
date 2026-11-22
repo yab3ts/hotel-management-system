@@ -1,211 +1,393 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, UtensilsCrossed, Check, ChefHat, CheckCircle2, Filter, AlertTriangle } from "lucide-react";
+import { 
+  Clock, 
+  UtensilsCrossed, 
+  Check, 
+  ChefHat, 
+  CheckCircle2, 
+  Filter, 
+  AlertTriangle, 
+  RefreshCw, 
+  Volume2, 
+  VolumeX, 
+  Wifi, 
+  WifiOff 
+} from "lucide-react";
 import { KitchenLayout } from "@/components/KitchenLayout";
 import { PageHeader } from "@/components/PageHeader";
+import { api } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
+import { playNotificationSound, unlockAudio, isAudioUnlocked } from "@/lib/sound";
 
-interface KitchenOrder {
-  id: string;
-  table: string;
-  items: { name: string; done: boolean }[];
-  status: "Queue" | "Preparing" | "Ready" | "Completed";
-  placedAt: number;
-  estimatedMin: number | null;
-  priority: string;
+interface KitchenItem {
+  id: number;
+  item_name: string;
+  quantity: number;
+  status: string;
+  special_notes?: string;
+  customizations?: string[];
 }
 
-const now = Date.now();
-const initialOrders: KitchenOrder[] = [
-  { id: "#1024", table: "T-05", items: [{ name: "Grilled Salmon", done: false }, { name: "Caesar Salad", done: false }], status: "Preparing", placedAt: now - 3 * 60000, estimatedMin: 15, priority: "high" },
-  { id: "#1025", table: "T-02", items: [{ name: "Wagyu Steak", done: false }, { name: "Truffle Fries", done: false }], status: "Preparing", placedAt: now - 1 * 60000, estimatedMin: 25, priority: "high" },
-  { id: "#1023", table: "T-12", items: [{ name: "Margherita Pizza x2", done: false }, { name: "Tiramisu", done: false }], status: "Queue", placedAt: now - 5 * 60000, estimatedMin: 20, priority: "medium" },
-  { id: "#1021", table: "T-08", items: [{ name: "Pasta Carbonara", done: false }], status: "Queue", placedAt: now - 8 * 60000, estimatedMin: null, priority: "low" },
-  { id: "#1026", table: "T-10", items: [{ name: "Fish & Chips x2", done: true }], status: "Ready", placedAt: now - 10 * 60000, estimatedMin: 10, priority: "medium" },
-  { id: "#1020", table: "T-01", items: [{ name: "Burger Deluxe", done: true }, { name: "Fries", done: true }], status: "Completed", placedAt: now - 15 * 60000, estimatedMin: 12, priority: "low" },
-];
+interface KitchenOrder {
+  id: number;
+  order_number: string;
+  table_number: string;
+  guest_name: string;
+  items: KitchenItem[];
+  status: "placed" | "accepted" | "preparing" | "ready" | "served" | "cancelled";
+  placedAt: number;
+  estimatedMin: number;
+  notes?: string;
+}
 
-const statusColors: Record<string, string> = {
-  Queue: "bg-warning/10 text-warning",
-  Preparing: "bg-info/10 text-info",
-  Ready: "bg-success/10 text-success",
-  Completed: "bg-muted text-muted-foreground",
+const statusOrder: KitchenOrder["status"][] = ["placed", "accepted", "preparing", "ready", "served"];
+
+const statusLabels: Record<string, string> = {
+  placed: "New Order",
+  accepted: "Accepted",
+  preparing: "Preparing",
+  ready: "Ready for Pickup",
+  served: "Served",
+  cancelled: "Cancelled",
 };
 
-const statusOrder: KitchenOrder["status"][] = ["Queue", "Preparing", "Ready", "Completed"];
+const statusColors: Record<string, string> = {
+  placed: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
+  accepted: "bg-blue-500/15 text-blue-400 border border-blue-500/30",
+  preparing: "bg-orange-500/15 text-orange-400 border border-orange-500/30",
+  ready: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30",
+  served: "bg-stone-800 text-stone-400 border border-stone-700",
+  cancelled: "bg-red-500/15 text-red-400 border border-red-500/30",
+};
 
-function ElapsedBadge({ placedAt, estimatedMin }: { placedAt: number; estimatedMin: number | null }) {
-  const [elapsed, setElapsed] = useState(0);
+function ElapsedTimer({ placedAt, estimatedMin }: { placedAt: number; estimatedMin: number }) {
+  const [elapsedSec, setElapsedSec] = useState(0);
+
   useEffect(() => {
-    const update = () => setElapsed(Math.floor((Date.now() - placedAt) / 1000));
+    const update = () => setElapsedSec(Math.max(0, Math.floor((Date.now() - placedAt) / 1000)));
     update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
   }, [placedAt]);
 
-  const mins = Math.floor(elapsed / 60);
-  const secs = elapsed % 60;
-  const exceeds = estimatedMin !== null && mins >= estimatedMin;
-  const nearLimit = estimatedMin !== null && mins >= estimatedMin * 0.8 && !exceeds;
+  const mins = Math.floor(elapsedSec / 60);
+  const secs = elapsedSec % 60;
+  const isOverdue = mins >= estimatedMin;
+  const isWarning = mins >= estimatedMin * 0.75 && !isOverdue;
 
   return (
-    <span className={`text-xs font-mono font-bold flex items-center gap-1 px-2 py-0.5 rounded-lg whitespace-nowrap ${
-      exceeds ? "bg-destructive/15 text-destructive animate-pulse" : nearLimit ? "bg-warning/15 text-warning" : "text-muted-foreground"
-    }`}>
-      <Clock className="w-3 h-3 flex-shrink-0" />
+    <span
+      className={`text-xs font-mono font-bold flex items-center gap-1 px-2.5 py-0.5 rounded-lg ${
+        isOverdue
+          ? "bg-red-500/20 text-red-400 animate-pulse border border-red-500/40"
+          : isWarning
+          ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+          : "bg-stone-800 text-stone-300"
+      }`}
+    >
+      <Clock className="w-3 h-3" />
       {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
-      {exceeds && <AlertTriangle className="w-3 h-3 flex-shrink-0" />}
+      {isOverdue && <AlertTriangle className="w-3 h-3 text-red-400 ml-0.5" />}
     </span>
   );
 }
 
 export default function KitchenOrders() {
-  const [orders, setOrders] = useState<KitchenOrder[]>(initialOrders);
+  const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("All");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [isOnline, setIsOnline] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [audioUnlocked, setAudioUnlocked] = useState(() => isAudioUnlocked());
+  const prevOrderCountRef = useRef(0);
 
-  const toggleItemDone = (orderId: string, itemIdx: number) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id !== orderId) return o;
-      const newItems = o.items.map((it, i) => i === itemIdx ? { ...it, done: !it.done } : it);
-      return { ...o, items: newItems };
-    }));
-  };
+  const fetchOrders = async (isManual = false) => {
+    try {
+      if (isManual) setRefreshing(true);
+      const res = await api.getKitchenOrders();
+      setIsOnline(true);
+      setLastUpdated(new Date());
 
-  const advanceStatus = (orderId: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id !== orderId) return o;
-      const idx = statusOrder.indexOf(o.status);
-      if (idx < statusOrder.length - 1) {
-        const next = statusOrder[idx + 1];
-        return { ...o, status: next, items: next === "Completed" ? o.items.map(it => ({ ...it, done: true })) : o.items };
+      if (Array.isArray(res)) {
+        const mapped: KitchenOrder[] = res.map((o: any) => ({
+          id: o.id,
+          order_number: o.order_number,
+          table_number: o.table?.table_number || "Takeaway",
+          guest_name: o.guest_name || "Guest",
+          status: o.status || "placed",
+          notes: o.notes,
+          placedAt: o.placed_at ? new Date(o.placed_at).getTime() : new Date(o.created_at).getTime(),
+          estimatedMin: 15,
+          items: (o.items || []).map((it: any) => ({
+            id: it.id,
+            item_name: it.item_name,
+            quantity: it.quantity,
+            status: it.status || "placed",
+            special_notes: it.special_notes,
+            customizations: it.customizations,
+          })),
+        }));
+
+        // Sound alert if new orders arrived
+        const placedCount = mapped.filter((o) => o.status === "placed").length;
+        if (soundEnabled && placedCount > prevOrderCountRef.current && prevOrderCountRef.current !== 0) {
+          playNotificationSound("kitchen_new_order");
+        }
+        prevOrderCountRef.current = placedCount;
+
+        setOrders(mapped);
       }
-      return o;
-    }));
+    } catch (err: any) {
+      console.warn("Kitchen orders fetch failed:", err);
+      setIsOnline(false);
+    } finally {
+      setLoading(false);
+      if (isManual) setRefreshing(false);
+    }
   };
 
-  const markAllDone = (orderId: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id !== orderId) return o;
-      return { ...o, items: o.items.map(it => ({ ...it, done: true })), status: "Ready" };
-    }));
+  const handleEnableAudio = async () => {
+    const success = await unlockAudio();
+    if (success) {
+      setAudioUnlocked(true);
+      toast({
+        title: "Kitchen Audio Alerts Active",
+        description: "Sound alerts unlocked for incoming kitchen orders.",
+      });
+    }
   };
 
-  const filtered = filterStatus === "All" ? orders : orders.filter(o => o.status === filterStatus);
+  useEffect(() => {
+    fetchOrders();
+
+    // Staff screen: continuous polling so audio chimes trigger even when screen is locked
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [soundEnabled]);
+
+  const advanceOrderStatus = async (orderId: number, currentStatus: KitchenOrder["status"]) => {
+    const currentIndex = statusOrder.indexOf(currentStatus);
+    if (currentIndex < 0 || currentIndex >= statusOrder.length - 1) return;
+    const nextStatus = statusOrder[currentIndex + 1];
+
+    try {
+      await api.updateOrderStatus(orderId, nextStatus);
+      if (nextStatus === "ready" && soundEnabled) {
+        playNotificationSound("order_ready");
+      }
+      toast({
+        title: `Order Updated: ${statusLabels[nextStatus]}`,
+        description: `Order #${orderId} moved to ${statusLabels[nextStatus]}.`,
+      });
+      fetchOrders();
+    } catch (err: any) {
+      toast({
+        title: "Update Failed",
+        description: err.message || "Could not advance order.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const markItemComplete = async (itemId: number) => {
+    try {
+      await api.completeKitchenItem(itemId);
+      fetchOrders();
+    } catch (err: any) {
+      console.error("Item complete failed:", err);
+    }
+  };
+
+  const filtered = filterStatus === "All" 
+    ? orders 
+    : orders.filter((o) => o.status === filterStatus);
 
   return (
     <KitchenLayout>
-      <PageHeader title="All Orders" subtitle="Complete order list — mark items done, advance status" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <PageHeader 
+          title="Kitchen Order Queue" 
+          subtitle="Real-time preparation pipeline with live guest tickets & notes" 
+        />
 
+        <div className="flex items-center gap-2">
+          {/* Connection Indicator */}
+          <div className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 border ${
+            isOnline ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-red-500/10 text-red-400 border-red-500/20 animate-pulse"
+          }`}>
+            {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+            {isOnline ? "Live Sync" : "Reconnecting..."}
+          </div>
+
+          {!audioUnlocked && (
+            <button
+              onClick={handleEnableAudio}
+              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-stone-950 text-xs font-bold flex items-center gap-1.5 shadow animate-pulse"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              Enable Audio Alerts
+            </button>
+          )}
+
+          {/* Sound Toggle */}
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className={`p-2 rounded-xl border text-xs font-semibold transition-colors ${
+              soundEnabled ? "bg-amber-500/15 text-amber-400 border-amber-500/30" : "bg-card text-muted-foreground border-border"
+            }`}
+            title={soundEnabled ? "Sound Alerts Enabled" : "Sound Alerts Muted"}
+          >
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </button>
+
+          {/* Sync Button */}
+          <button
+            onClick={() => fetchOrders(true)}
+            disabled={refreshing}
+            className="px-3.5 py-2 rounded-xl bg-card border border-border text-xs font-semibold text-foreground flex items-center gap-1.5 hover:bg-muted transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-primary" : ""}`} />
+            Sync
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Tabs */}
       <div className="flex flex-wrap items-center gap-2 mb-6">
         <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-        {["All", ...statusOrder].map(s => (
+        {["All", ...statusOrder].map((s) => (
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-              filterStatus === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+            className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition-all capitalize ${
+              filterStatus === s 
+                ? "bg-primary text-primary-foreground shadow" 
+                : "bg-card border border-border text-muted-foreground hover:text-foreground"
             }`}
           >
-            {s}
+            {s === "All" ? "All Orders" : statusLabels[s]}
           </button>
         ))}
       </div>
 
+      {/* Order Cards List */}
       <div className="space-y-3">
         <AnimatePresence>
-          {filtered.map((order, i) => {
-            const doneCount = order.items.filter(it => it.done).length;
-            const allDone = doneCount === order.items.length;
-            const nextStatus = statusOrder[statusOrder.indexOf(order.status) + 1];
-            return (
-              <motion.div
-                key={order.id}
-                layout
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ delay: i * 0.03 }}
-                className="glass-card-elevated p-4 overflow-hidden"
-              >
-                <div className="flex flex-col gap-3">
-                  {/* Top: order info */}
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <UtensilsCrossed className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <p className="text-sm font-semibold text-foreground whitespace-nowrap">{order.id} · {order.table}</p>
-                        <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap ${statusColors[order.status]}`}>{order.status}</span>
-                        {order.priority === "high" && (
-                          <span className="text-[10px] font-bold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded whitespace-nowrap">RUSH</span>
-                        )}
-                        <ElapsedBadge placedAt={order.placedAt} estimatedMin={order.estimatedMin} />
+          {filtered.length === 0 ? (
+            <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
+              <UtensilsCrossed className="w-10 h-10 mx-auto mb-2 opacity-40" />
+              <p className="text-sm font-semibold">No orders currently in this queue</p>
+              <p className="text-xs">Orders placed via QR codes will automatically chime and appear here.</p>
+            </div>
+          ) : (
+            filtered.map((order, i) => {
+              const nextStatus = statusOrder[statusOrder.indexOf(order.status) + 1];
+              return (
+                <motion.div
+                  key={order.id}
+                  layout
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="flex flex-col gap-3">
+                    {/* Header line */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-display font-black text-base text-foreground">
+                          {order.table_number}
+                        </span>
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          • {order.guest_name}
+                        </span>
+                        <span className="text-xs font-mono text-muted-foreground/60">
+                          ({order.order_number})
+                        </span>
                       </div>
 
-                      {/* Items */}
-                      <div className="space-y-1.5">
-                        {order.items.map((it, idx) => (
-                          <div key={idx} className="flex items-center gap-2 min-w-0">
-                            <button
-                              onClick={() => toggleItemDone(order.id, idx)}
-                              disabled={order.status === "Completed"}
-                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                                it.done ? "bg-success border-success text-success-foreground" : "border-border hover:border-primary"
-                              } disabled:opacity-50`}
-                            >
-                              {it.done && <Check className="w-3 h-3" />}
-                            </button>
-                            <span className={`text-sm truncate ${it.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                              {it.name}
-                            </span>
-                          </div>
-                        ))}
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${statusColors[order.status]}`}>
+                          {statusLabels[order.status]}
+                        </span>
+                        <ElapsedTimer placedAt={order.placedAt} estimatedMin={order.estimatedMin} />
                       </div>
-
-                      {order.status !== "Completed" && order.items.length > 1 && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden max-w-[120px]">
-                            <motion.div
-                              className="h-full rounded-full bg-primary"
-                              animate={{ width: `${(doneCount / order.items.length) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-muted-foreground">{doneCount}/{order.items.length}</span>
-                        </div>
-                      )}
                     </div>
-                  </div>
 
-                  {/* Bottom: actions */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50">
-                    {order.estimatedMin !== null && (
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">ETA: {order.estimatedMin}m</span>
+                    {/* Table / Order Notes */}
+                    {order.notes && (
+                      <div className={`rounded-xl px-3 py-1.5 text-xs font-semibold ${
+                        /allerg|celiac|nut|peanut|gluten|dairy/i.test(order.notes)
+                          ? "bg-red-500/20 border border-red-500/40 text-red-300 animate-pulse"
+                          : "bg-amber-500/10 border border-amber-500/20 text-amber-300 font-medium"
+                      }`}>
+                        {/allerg|celiac|nut|peanut|gluten|dairy/i.test(order.notes) ? "🚨 ALLERGY ALERT: " : "⚠️ Note: "}
+                        "{order.notes}"
+                      </div>
                     )}
-                    <div className="flex items-center gap-2 ml-auto flex-wrap">
-                      {order.status !== "Completed" && order.status !== "Ready" && !allDone && (
-                        <motion.button
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => markAllDone(order.id)}
-                          className="text-[11px] font-semibold bg-success/10 text-success px-2.5 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap"
-                        >
-                          <CheckCircle2 className="w-3 h-3 flex-shrink-0" /> All Done
-                        </motion.button>
-                      )}
+
+                    {/* Dish Items List */}
+                    <div className="space-y-2">
+                      {order.items.map((it) => (
+                        <div key={it.id} className="flex items-start justify-between text-xs py-1">
+                          <div className="flex-1">
+                            <span className="font-bold text-foreground">
+                              {it.quantity}x {it.item_name}
+                            </span>
+                            {it.special_notes && (
+                              <div className={`text-[11px] mt-1 px-2 py-0.5 rounded-md inline-block ${
+                                /allerg|celiac|nut|peanut|gluten|dairy/i.test(it.special_notes)
+                                  ? "bg-red-500/20 border border-red-500/40 text-red-300 font-bold"
+                                  : "bg-amber-500/10 text-amber-400 italic font-medium"
+                              }`}>
+                                {/allerg|celiac|nut|peanut|gluten|dairy/i.test(it.special_notes) ? "⚠️ ALLERGY: " : "Instructions: "}
+                                "{it.special_notes}"
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={() => markItemComplete(it.id)}
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors ${
+                              it.status === "ready"
+                                ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
+                                : "bg-secondary border-border text-muted-foreground hover:border-primary"
+                            }`}
+                          >
+                            {it.status === "ready" ? "✓ Done" : "Mark Done"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Bottom Action Bar */}
+                    <div className="flex items-center justify-between border-t border-border/50 pt-2.5 mt-1">
+                      <span className="text-[11px] text-muted-foreground">
+                        {order.items.length} items on ticket
+                      </span>
+
                       {nextStatus && (
-                        <motion.button
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => advanceStatus(order.id)}
-                          className="text-[11px] font-semibold bg-primary text-primary-foreground px-3 py-1 rounded-lg flex items-center gap-1 whitespace-nowrap"
+                        <button
+                          onClick={() => advanceOrderStatus(order.id, order.status)}
+                          className="px-4 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold flex items-center gap-1.5 shadow transition-colors"
                         >
-                          <ChefHat className="w-3 h-3 flex-shrink-0" /> → {nextStatus}
-                        </motion.button>
+                          <ChefHat className="w-3.5 h-3.5" />
+                          Move to {statusLabels[nextStatus]} →
+                        </button>
                       )}
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
+                </motion.div>
+              );
+            })
+          )}
         </AnimatePresence>
       </div>
     </KitchenLayout>

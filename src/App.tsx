@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 // Landing & Auth
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
+import GetStartedPage from "./pages/GetStartedPage";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -28,6 +29,15 @@ import AdminCoins from "./pages/admin/AdminCoins";
 import AdminScheduling from "./pages/admin/AdminScheduling";
 import AdminDeals from "./pages/admin/AdminDeals";
 import AdminReviews from "./pages/admin/AdminReviews";
+import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
+import AdminSettings from "./pages/admin/AdminSettings";
+
+// Legal & Policies
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsPage from "./pages/TermsPage";
+
+// Network Alert
+import { NetworkStatusBanner } from "./components/NetworkStatusBanner";
 
 // Kitchen pages
 import KitchenDashboard from "./pages/kitchen/KitchenDashboard";
@@ -51,6 +61,11 @@ import CustomerReferrals from "./pages/customer/CustomerReferrals";
 import CustomerDeals from "./pages/customer/CustomerDeals";
 import CustomerRecommendations from "./pages/customer/CustomerRecommendations";
 
+// QR Dining & Waiter Floor
+import QrLandingPage from "./pages/customer/qr/QrLandingPage";
+import QrTableTab from "./pages/customer/qr/QrTableTab";
+import WaiterDashboard from "./pages/waiter/WaiterDashboard";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,11 +87,27 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <NetworkStatusBanner />
           <ScrollToTop />
           <Routes>
             {/* Public */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/get-started" element={<GetStartedPage />} />
+            <Route path="/getstarted" element={<GetStartedPage />} />
+            <Route path="/login" element={<AuthPage />} />
             <Route path="/login/:role" element={<AuthPage />} />
+            <Route path="/signup" element={<AuthPage />} />
+            <Route path="/signup/:role" element={<AuthPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+
+            {/* QR Table Ordering Flow */}
+            <Route path="/t/:token" element={<QrLandingPage />} />
+            <Route path="/t/:token/tab" element={<QrTableTab />} />
+
+            {/* Waiter Floor Companion */}
+            <Route path="/waiter" element={<WaiterDashboard />} />
+            <Route path="/floor" element={<WaiterDashboard />} />
 
             {/* Admin */}
             <Route path="/admin" element={<AdminDashboard />} />
@@ -95,6 +126,8 @@ const App = () => (
             <Route path="/admin/scheduling" element={<AdminScheduling />} />
             <Route path="/admin/deals" element={<AdminDeals />} />
             <Route path="/admin/reviews" element={<AdminReviews />} />
+            <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
 
             {/* Kitchen */}
             <Route path="/kitchen" element={<KitchenDashboard />} />

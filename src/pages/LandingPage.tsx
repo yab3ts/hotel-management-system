@@ -309,7 +309,7 @@ export default function LandingPage() {
             >
               <ThemeToggle />
             </motion.div>
-            <Link to="/login/admin">
+            <Link to="/get-started">
               <motion.button
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -459,7 +459,7 @@ export default function LandingPage() {
               transition={{ duration: 0.6, delay: 0.9 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Link to="/login/admin">
+              <Link to="/get-started">
                 <motion.button
                   whileHover={{ scale: 1.05, boxShadow: "0 20px 40px -15px hsla(var(--primary), 0.4)" }}
                   whileTap={{ scale: 0.95 }}
@@ -829,7 +829,13 @@ export default function LandingPage() {
                   {link.label}
                 </a>
               ))}
-              <Link to="/login/customer" className="px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity">
+              <Link to="/privacy" className="cursor-pointer transition-colors hover:text-primary">
+                Privacy
+              </Link>
+              <Link to="/terms" className="cursor-pointer transition-colors hover:text-primary">
+                Terms
+              </Link>
+              <Link to="/get-started" className="px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity">
                 Get Started
               </Link>
             </motion.div>

@@ -8,23 +8,65 @@ const PORT = 5000;
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
-const users = [];
-
 function generateToken() {
   return crypto.randomBytes(32).toString('hex');
 }
+
+const users = [
+  {
+    id: 'usr_admin_1',
+    email: 'admin@cafex.com',
+    password: 'admin123',
+    full_name: 'Café Administrator',
+    phone: '+1 (555) 010-0001',
+    role: 'admin',
+    roles: ['admin', 'manager', 'customer'],
+    token: generateToken(),
+    created_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'usr_kitchen_1',
+    email: 'kitchen@cafex.com',
+    password: 'kitchen123',
+    full_name: 'Head Chef Marco',
+    phone: '+1 (555) 010-0002',
+    role: 'kitchen',
+    roles: ['kitchen', 'kitchen_staff', 'customer'],
+    token: generateToken(),
+    created_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'usr_customer_1',
+    email: 'customer@cafex.com',
+    password: 'customer123',
+    full_name: 'John Customer',
+    phone: '+1 (555) 010-0003',
+    role: 'customer',
+    roles: ['customer'],
+    token: generateToken(),
+    created_at: '2026-01-01T00:00:00.000Z',
+  },
+];
 
 app.post('/api/auth/signup', (req, res) => {
   const { email, password, full_name, phone, role = 'customer' } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
-  if (users.find(u => u.email === email)) return res.status(400).json({ error: 'User already exists' });
+  if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+    return res.status(400).json({ error: 'User already exists' });
+  }
 
   const token = generateToken();
-  const userRoles = role === 'customer' ? ['customer'] : [role, 'customer'];
+  let userRoles = ['customer'];
+  if (role === 'admin') {
+    userRoles = ['admin', 'manager', 'customer'];
+  } else if (role === 'kitchen') {
+    userRoles = ['kitchen', 'kitchen_staff', 'customer'];
+  }
+
   const user = {
     id: crypto.randomUUID(),
-    email,
+    email: email.toLowerCase(),
     full_name: full_name || email.split('@')[0],
     phone: phone || '',
     role: userRoles[0],
@@ -33,14 +75,14 @@ app.post('/api/auth/signup', (req, res) => {
   };
   users.push({ ...user, password, token });
 
-  res.status(201).json({ user, token, session: { access_token: token } });
+  res.status(201).json({ user, token, session: { access_token: token }, roles: userRoles });
 });
 
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
-  const found = users.find(u => u.email === email && u.password === password);
+  const found = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
   if (!found) return res.status(401).json({ error: 'Invalid email or password' });
 
   const { password: _, token, ...user } = found;

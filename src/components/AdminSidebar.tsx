@@ -3,8 +3,8 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, UtensilsCrossed, ShoppingCart, Grid3X3, ChefHat,
-  CreditCard, Package, Users, BarChart3, Heart, Bell, Shield,
-  ChevronLeft, ChevronRight, Menu, LogOut, Coins, Calendar, Flame, Star
+  CreditCard, Package, Users, BarChart3, Heart, Bell, Shield, ShieldCheck,
+  ChevronLeft, ChevronRight, Menu, LogOut, Coins, Calendar, Flame, Star, Sliders
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -46,8 +46,10 @@ const navSections = [
   {
     label: "System",
     items: [
+      { title: "Audit Trail", icon: ShieldCheck, path: "/admin/audit-logs" },
       { title: "Notifications", icon: Bell, path: "/admin/notifications" },
       { title: "Users & Roles", icon: Shield, path: "/admin/users" },
+      { title: "Settings", icon: Sliders, path: "/admin/settings" },
     ],
   },
 ];
