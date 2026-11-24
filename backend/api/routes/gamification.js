@@ -70,7 +70,7 @@ module.exports = function (supabase, requireRole, logActivity) {
         milestones: milestones || [],
       });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -147,7 +147,7 @@ module.exports = function (supabase, requireRole, logActivity) {
         spins_remaining: maxSpins - (todaySpins || 0) - 1,
       });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -197,7 +197,7 @@ module.exports = function (supabase, requireRole, logActivity) {
 
       res.json({ redemption, new_balance: newBalance });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -210,7 +210,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -233,7 +233,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -251,7 +251,7 @@ module.exports = function (supabase, requireRole, logActivity) {
 
       res.json({ profile, transactions, redemptions, spins });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -277,7 +277,7 @@ module.exports = function (supabase, requireRole, logActivity) {
 
       res.json({ new_balance: newBalance });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -319,7 +319,7 @@ module.exports = function (supabase, requireRole, logActivity) {
         total_customers: profiles?.length || 0,
       });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -330,7 +330,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -340,7 +340,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.status(201).json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -351,7 +351,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -363,7 +363,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -375,7 +375,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 

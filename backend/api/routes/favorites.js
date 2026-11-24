@@ -11,7 +11,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -24,7 +24,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.status(201).json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -35,7 +35,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json({ message: 'Removed from favorites' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -46,7 +46,7 @@ module.exports = function (supabase) {
         .select('id').eq('customer_id', req.user.id).eq('menu_item_id', req.params.menu_item_id);
       res.json({ is_favorite: data && data.length > 0 });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 

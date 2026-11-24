@@ -22,7 +22,7 @@ module.exports = function (supabase) {
 
       res.json({ notifications: data, unread_count: count || 0 });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -35,7 +35,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -47,7 +47,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json({ message: 'All marked as read' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -59,7 +59,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json({ message: 'Read notifications cleared' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 

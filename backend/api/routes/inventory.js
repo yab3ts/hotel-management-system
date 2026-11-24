@@ -20,7 +20,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -36,7 +36,7 @@ module.exports = function (supabase, requireRole, logActivity) {
         .select('*, menu_items(name, emoji)').eq('inventory_id', req.params.id);
       res.json({ ...item, restock_history: restocks, usage_history: usage, linked_menu_items: linkedItems });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -48,7 +48,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'inventory_item_created', 'inventory', data.id, { name: data.name });
       res.status(201).json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -60,7 +60,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -72,7 +72,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'inventory_item_deleted', 'inventory', req.params.id);
       res.json({ message: 'Deleted' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -102,7 +102,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'inventory_restocked', 'inventory', req.params.id, { quantity_added: quantity });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -116,7 +116,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -138,7 +138,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'inventory_usage_logged', 'inventory', req.params.id, { quantity_used, reason });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -153,7 +153,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -170,7 +170,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       }
       res.json([]);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 

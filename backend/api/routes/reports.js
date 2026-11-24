@@ -21,7 +21,7 @@ module.exports = function (supabase, requireRole) {
 
       res.json({ total_revenue: total, total_tips: totalTips, transaction_count: data.length, by_method: byMethod });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -41,7 +41,7 @@ module.exports = function (supabase, requireRole) {
 
       res.json({ total_orders: data.length, by_status: byStatus, avg_order_value: Math.round(avgTotal * 100) / 100 });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -61,7 +61,7 @@ module.exports = function (supabase, requireRole) {
 
       res.json(Object.values(itemMap).sort((a, b) => b.total_qty - a.total_qty).slice(0, 10));
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -81,7 +81,7 @@ module.exports = function (supabase, requireRole) {
 
       res.json(Object.values(catMap).sort((a, b) => b.revenue - a.revenue));
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -94,7 +94,7 @@ module.exports = function (supabase, requireRole) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -112,7 +112,7 @@ module.exports = function (supabase, requireRole) {
 
       res.json(hourly.map((count, hour) => ({ hour: `${hour}:00`, orders: count })));
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 

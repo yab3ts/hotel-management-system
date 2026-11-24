@@ -110,12 +110,9 @@ function handleLocalAuth(endpoint: string, body: unknown) {
     const existing = users.find(u => u.email.toLowerCase() === normalizedEmail);
     if (existing) throw new Error('User already exists with this email');
 
-    let userRoles = ['customer'];
-    if (role === 'admin') {
-      userRoles = ['admin', 'manager', 'customer'];
-    } else if (role === 'kitchen') {
-      userRoles = ['kitchen', 'kitchen_staff', 'customer'];
-    }
+    // Security Hardening: Public registration strictly defaults to 'customer'.
+    // Staff/Admin roles are seeded or provisioned by existing managers.
+    const userRoles = ['customer'];
 
     const token = 'mock-jwt-' + Math.random().toString(36).substring(2) + Date.now().toString(36);
     const newUser: StoredUser = {

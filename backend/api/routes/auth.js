@@ -7,7 +7,7 @@ module.exports = function (supabase) {
   // Sign up
   router.post('/signup', async (req, res) => {
     try {
-      const { email, password, full_name, phone, role = 'customer' } = req.body;
+      const { email, password, full_name, phone } = req.body;
       if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
       if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
@@ -17,14 +17,13 @@ module.exports = function (supabase) {
       });
       if (error) return res.status(400).json({ error: error.message });
 
-      // Assign role (profile + loyalty created by trigger)
-      if (role !== 'customer') {
-        await supabase.from('user_roles').insert({ user_id: data.user.id, role });
-      }
+      // Security Hardening (CWE-269): Public signup strictly assigns 'customer' role.
+      // Roles are not assigned from client payload.
+      await supabase.from('user_roles').insert({ user_id: data.user.id, role: 'customer' });
 
       res.status(201).json({ user: data.user });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -45,7 +44,7 @@ module.exports = function (supabase) {
 
       res.json({ user: data.user, session: data.session, roles: roles?.map(r => r.role) || [], profile });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -70,7 +69,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json({ message: 'Password reset email sent' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -86,7 +85,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json({ message: 'Password updated' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -104,7 +103,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json({ message: 'Password changed' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -121,7 +120,7 @@ module.exports = function (supabase) {
 
       res.json({ user, profile, roles: roles?.map(r => r.role) || [], addresses: addresses || [] });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -145,7 +144,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -161,7 +160,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -181,7 +180,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.status(201).json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -200,7 +199,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -214,7 +213,7 @@ module.exports = function (supabase) {
       if (error) return res.status(400).json({ error: error.message });
       res.json({ message: 'Address deleted' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 

@@ -26,7 +26,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -39,7 +39,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(404).json({ error: 'Order not found' });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -133,7 +133,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'order_created', 'order', order.id, { item_count: items.length, order_type });
       res.status(201).json(completeOrder);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -187,7 +187,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'order_status_updated', 'order', data.id, { status, cancel_reason });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -224,7 +224,7 @@ module.exports = function (supabase, requireRole, logActivity) {
 
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -237,7 +237,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -266,7 +266,7 @@ module.exports = function (supabase, requireRole, logActivity) {
         .select('*, order_items(*, menu_items(name, emoji))').eq('id', newOrder.id).single();
       res.status(201).json(complete);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 

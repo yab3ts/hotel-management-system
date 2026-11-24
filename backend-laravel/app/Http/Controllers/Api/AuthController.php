@@ -24,11 +24,14 @@ class AuthController extends Controller
             'full_name' => ['nullable', 'string', 'max:255'],
             'name' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
-            'role' => ['nullable', 'string'],
         ]);
 
         $name = $validated['full_name'] ?? $validated['name'] ?? explode('@', $validated['email'])[0];
-        $role = $validated['role'] ?? 'customer';
+
+        // Security Hardening (CWE-269): Public signup strictly assigns 'customer' role.
+        // Administrative and staff roles (admin, manager, kitchen) cannot be requested via public endpoints.
+        $role = 'customer';
+        $assignedRoles = ['customer'];
 
         $tenant = TenantContext::getTenant() ?? Tenant::first();
 
@@ -39,16 +42,6 @@ class AuthController extends Controller
             'phone' => $validated['phone'] ?? null,
             'current_tenant_id' => $tenant?->id,
         ]);
-
-        // Map role properly
-        $roleMapping = [
-            'admin' => ['admin', 'manager', 'customer'],
-            'kitchen' => ['kitchen', 'kitchen_staff', 'customer'],
-            'kitchen_staff' => ['kitchen', 'kitchen_staff', 'customer'],
-            'customer' => ['customer'],
-        ];
-
-        $assignedRoles = $roleMapping[$role] ?? [$role, 'customer'];
 
         if ($tenant) {
             foreach ($assignedRoles as $r) {

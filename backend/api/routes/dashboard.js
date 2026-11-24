@@ -11,7 +11,7 @@ module.exports = function (supabase, requireRole) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -37,7 +37,7 @@ module.exports = function (supabase, requireRole) {
       const sorted = Object.values(itemMap).sort((a, b) => b.total_qty - a.total_qty).slice(0, parseInt(limit));
       res.json(sorted);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -68,7 +68,7 @@ module.exports = function (supabase, requireRole) {
 
       res.json({ total_revenue: total, total_tips: totalTips, transaction_count: data.length, by_method: byMethod, by_date: byDate });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -95,7 +95,7 @@ module.exports = function (supabase, requireRole) {
 
       res.json({ preparing, ready, pending, completed_today: completed.length, avg_service_minutes: avgServiceTime });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -123,7 +123,7 @@ module.exports = function (supabase, requireRole) {
         avg_lifetime_value: profiles?.length > 0 ? Math.round(totalSpent / profiles.length * 100) / 100 : 0,
       });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -137,7 +137,7 @@ module.exports = function (supabase, requireRole) {
       data.forEach(s => { settings[s.key] = s.value; });
       res.json(settings);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -151,7 +151,7 @@ module.exports = function (supabase, requireRole) {
       }
       res.json({ message: 'Settings updated' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 

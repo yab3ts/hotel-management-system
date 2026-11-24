@@ -67,17 +67,18 @@ describe("Authentication API & Local Fallback", () => {
     expect(loginRes.token).toBeDefined();
   });
 
-  it("should register a kitchen user with kitchen_staff role", async () => {
-    const kitchenEmail = `chef_${Date.now()}@example.com`;
+  it("should prevent privilege escalation on public signup and always assign customer role", async () => {
+    const attemptedAdminEmail = `attacker_${Date.now()}@example.com`;
     const signupRes = await api.post("/auth/signup", {
-      full_name: "Chef Pierre",
-      email: kitchenEmail,
+      full_name: "Privilege Escalation Tester",
+      email: attemptedAdminEmail,
       password: "password123",
-      role: "kitchen",
+      role: "admin",
     });
 
-    expect(signupRes.roles).toContain("kitchen");
-    expect(signupRes.roles).toContain("kitchen_staff");
+    expect(signupRes.roles).not.toContain("admin");
+    expect(signupRes.roles).not.toContain("manager");
+    expect(signupRes.roles).toContain("customer");
   });
 
   it("should reject signup with password less than 6 characters", async () => {

@@ -12,7 +12,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(profiles);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -29,7 +29,7 @@ module.exports = function (supabase, requireRole, logActivity) {
 
       res.json({ ...profile, recent_orders: orders, loyalty_history: loyalty });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -43,7 +43,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'role_assigned', 'user', req.params.id, { role });
       res.status(201).json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -56,7 +56,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'role_removed', 'user', req.params.id, { role: req.params.role });
       res.json({ message: 'Role removed' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -68,7 +68,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'user_deactivated', 'user', req.params.id);
       res.json({ message: 'User deactivated' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -80,7 +80,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'user_activated', 'user', req.params.id);
       res.json({ message: 'User activated' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -92,7 +92,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       await logActivity(req.user.id, 'user_deleted', 'user', req.params.id);
       res.json({ message: 'User deleted' });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 
@@ -106,7 +106,7 @@ module.exports = function (supabase, requireRole, logActivity) {
       if (error) return res.status(400).json({ error: error.message });
       res.json(data);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
     }
   });
 

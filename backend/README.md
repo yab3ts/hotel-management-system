@@ -1,8 +1,10 @@
-# Café X - Backend API & Database (v3 - FINAL)
+# Café X - Backend API & Database (Legacy Prototype v3)
 
-Complete production-ready backend for the Café X restaurant management system.
+> [!NOTE]
+> **Architecture Status**: This directory (`backend/`) contains the initial Node.js / Express + Supabase prototype.
+> The active production backend is located in [`backend-laravel/`](../backend-laravel/), built on **Laravel 11, PostgreSQL 16, Sanctum token authentication, multi-tenant isolation, and automated CI test suites** deployed to Railway.
 
-## Architecture
+## Architecture (Legacy Prototype)
 
 - **Database**: PostgreSQL (Supabase compatible)
 - **API**: Node.js + Express

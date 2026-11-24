@@ -145,4 +145,32 @@ class RoleAuthorizationAndIsolationTest extends TestCase
         $resScan->assertStatus(200);
         $this->assertEquals('T-A', $resScan->json('table.table_number'));
     }
+
+    public function test_public_signup_cannot_escalate_role_to_admin(): void
+    {
+        $tenant = Tenant::create(['name' => 'Security Test Café', 'slug' => 'sec-' . uniqid()]);
+
+        // Attacker attempts to register with role=admin
+        $res = $this->withHeader('X-Tenant-ID', $tenant->id)->postJson('/api/auth/signup', [
+            'name' => 'Attacker',
+            'email' => 'attacker_' . uniqid() . '@exploit.test',
+            'password' => 'malicious_pass_123',
+            'role' => 'admin',
+        ]);
+
+        $res->assertStatus(201);
+        $roles = $res->json('roles');
+
+        // Verify that the assigned roles do NOT contain admin or manager
+        $this->assertNotContains('admin', $roles);
+        $this->assertNotContains('manager', $roles);
+        $this->assertContains('customer', $roles);
+
+        // Verify in database pivot that only 'customer' role was granted
+        $user = User::where('email', $res->json('user.email'))->first();
+        $this->assertNotNull($user);
+        $dbRoles = $tenant->users()->where('user_id', $user->id)->pluck('role')->toArray();
+        $this->assertNotContains('admin', $dbRoles);
+        $this->assertEquals(['customer'], $dbRoles);
+    }
 }
