@@ -110,12 +110,17 @@ class OrderController extends Controller
                 }
             }
 
+            $tenantId = \App\Tenancy\TenantContext::getTenantId() ?? $request->user()?->current_tenant_id;
+            do {
+                $orderNumber = '#' . rand(1000, 9999) . '-' . strtoupper(bin2hex(random_bytes(2)));
+            } while ($tenantId && Order::where('tenant_id', $tenantId)->where('order_number', $orderNumber)->exists());
+
             $order = Order::create([
                 'user_id' => $request->user()?->id,
                 'session_id' => $sessionId,
                 'table_id' => $validated['table_id'] ?? null,
                 'guest_name' => !empty($validated['guest_name']) ? strip_tags($validated['guest_name']) : 'Walk-in Guest',
-                'order_number' => '#' . rand(1000, 9999),
+                'order_number' => $orderNumber,
                 'order_type' => $validated['order_type'] ?? 'dine_in',
                 'status' => 'placed',
                 'placed_at' => now(),

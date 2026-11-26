@@ -418,6 +418,10 @@ class QrDiningController extends Controller
             $cleanGuestName = strip_tags(trim($validated['guest_name']));
             $cleanNotes = isset($validated['notes']) ? strip_tags(trim($validated['notes'])) : null;
 
+            do {
+                $orderNumber = '#' . rand(100, 999) . '-' . strtoupper(bin2hex(random_bytes(2)));
+            } while (Order::where('tenant_id', $table->tenant_id)->where('order_number', $orderNumber)->exists());
+
             $order = Order::create([
                 'tenant_id' => $table->tenant_id,
                 'branch_id' => $table->branch_id,
@@ -425,7 +429,7 @@ class QrDiningController extends Controller
                 'table_id' => $table->id,
                 'user_id' => $request->user()?->id,
                 'guest_name' => $cleanGuestName,
-                'order_number' => '#' . rand(100, 999),
+                'order_number' => $orderNumber,
                 'idempotency_key' => $idempotencyKey,
                 'payload_hash' => $payloadHash,
                 'order_type' => 'dine_in',
