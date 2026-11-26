@@ -156,6 +156,11 @@ class WaiterController extends Controller
             TableStateMachine::transition($table, TableStateMachine::STATUS_CLEANING, 'Bill settled by waiter');
         }
 
+        // Security (#112): Revoke any active digital room/table keys on session close
+        \App\Models\DigitalKey::where('table_session_id', $session->id)
+            ->whereNull('revoked_at')
+            ->update(['revoked_at' => now()]);
+
         if ($isOverride && $waivedAmount > 0) {
             AuditLog::record('session_override_settle', $session, [
                 'total' => $session->total,

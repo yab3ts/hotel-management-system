@@ -28,6 +28,17 @@ class AuditLog extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Security (#126): Audit logs are strictly immutable append-only records
+        static::updating(function () {
+            throw new \RuntimeException('Audit logs are immutable and cannot be modified.');
+        });
+        static::deleting(function () {
+            throw new \RuntimeException('Audit logs are immutable and cannot be deleted.');
+        });
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

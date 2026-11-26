@@ -31,11 +31,7 @@ class QrDiningController extends Controller
     {
         $table = RestaurantTable::withoutGlobalScopes()
             ->with('branch')
-            ->where(function ($q) use ($token) {
-                $q->where('qr_token', $token)
-                  ->orWhere('table_number', $token)
-                  ->orWhere('id', is_numeric($token) ? $token : -1);
-            })
+            ->where('qr_token', $token)
             ->where('status', '!=', 'maintenance')
             ->first();
 
@@ -112,10 +108,7 @@ class QrDiningController extends Controller
 
         $table = RestaurantTable::withoutGlobalScopes()
             ->with('branch')
-            ->where(function ($q) use ($token) {
-                $q->where('qr_token', $token)
-                  ->orWhere('table_number', $token);
-            })
+            ->where('qr_token', $token)
             ->where('status', '!=', 'maintenance')
             ->firstOrFail();
 
@@ -255,7 +248,6 @@ class QrDiningController extends Controller
         $table = RestaurantTable::withoutGlobalScopes()
             ->with('branch')
             ->where('qr_token', $token)
-            ->orWhere('table_number', $token)
             ->first();
 
         if (!$table) {
@@ -488,7 +480,6 @@ class QrDiningController extends Controller
     {
         $table = RestaurantTable::withoutGlobalScopes()
             ->where('qr_token', $token)
-            ->orWhere('table_number', $token)
             ->firstOrFail();
 
         if ($table->tenant_id) {
@@ -588,7 +579,6 @@ class QrDiningController extends Controller
         $table = RestaurantTable::withoutGlobalScopes()
             ->with('branch')
             ->where('qr_token', $token)
-            ->orWhere('table_number', $token)
             ->firstOrFail();
 
         if ($table->tenant_id) {
@@ -670,7 +660,6 @@ class QrDiningController extends Controller
         $table = RestaurantTable::withoutGlobalScopes()
             ->with('branch')
             ->where('qr_token', $token)
-            ->orWhere('table_number', $token)
             ->firstOrFail();
 
         if ($table->tenant_id) {
@@ -845,6 +834,9 @@ class QrDiningController extends Controller
                     'status' => 'closed',
                     'closed_at' => now(),
                 ]);
+                \App\Models\DigitalKey::where('table_session_id', $session->id)
+                    ->whereNull('revoked_at')
+                    ->update(['revoked_at' => now()]);
                 TableStateMachine::transition($table, TableStateMachine::STATUS_CLEANING, 'Full bill settled by guest and all orders served');
             }
 
@@ -871,7 +863,6 @@ class QrDiningController extends Controller
         $table = RestaurantTable::withoutGlobalScopes()
             ->with('branch')
             ->where('qr_token', $token)
-            ->orWhere('table_number', $token)
             ->firstOrFail();
 
         if ($table->tenant_id) {
@@ -913,7 +904,6 @@ class QrDiningController extends Controller
         $table = RestaurantTable::withoutGlobalScopes()
             ->with('branch')
             ->where('qr_token', $token)
-            ->orWhere('table_number', $token)
             ->firstOrFail();
 
         if ($table->tenant_id) {

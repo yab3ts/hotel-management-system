@@ -69,5 +69,20 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(40)->by('ip:'.$request->ip()),
             ];
         });
+
+        // Per-tenant quota limiter (M12 Noisy neighbor defense)
+        RateLimiter::for('tenant-api', function (Request $request) {
+            $tenantId = \App\Tenancy\TenantContext::getTenantId() ?? $request->header('X-Tenant-ID') ?? 'default';
+            return Limit::perMinute(300)->by('tenant:' . $tenantId);
+        });
+
+        // Set RLS bypass for console commands (migrations, seeders, backup drills)
+        if (app()->runningInConsole() && \Illuminate\Support\Facades\DB::getDriverName() === 'pgsql') {
+            try {
+                \Illuminate\Support\Facades\DB::statement("SELECT set_config('app.bypass_rls', 'on', false)");
+            } catch (\Throwable $e) {
+                // Connection may not be ready during initial boot
+            }
+        }
     }
 }

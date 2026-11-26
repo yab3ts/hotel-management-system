@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'payment_gateway' => [
+        'secret' => env('PAYMENT_WEBHOOK_SECRET', 'cafex_gw_secret_sandbox_key_99'),
+    ],
+
 ];

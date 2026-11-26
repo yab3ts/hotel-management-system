@@ -14,22 +14,26 @@ class PaymentGatewayService
 
     public function __construct(?string $secret = null)
     {
-        $this->webhookSecret = $secret ?? config('services.payment_gateway.secret', 'cafex_gw_secret_sandbox_key_99');
+        $configured = $secret ?? config('services.payment_gateway.secret');
+        if (app()->isProduction() && (empty($configured) || $configured === 'cafex_gw_secret_sandbox_key_99')) {
+            throw new \RuntimeException('Production Security Error: PAYMENT_WEBHOOK_SECRET must be configured with a cryptographically secure key in production environments.');
+        }
+        $this->webhookSecret = $configured ?? 'cafex_gw_secret_sandbox_key_99';
     }
 
     /**
      * Compute HMAC-SHA256 signature for a webhook payload.
      */
-    public function computeSignature(string $payload): string
+    public function computeSignature(string $payload, ?string $secretOverride = null): string
     {
-        return hash_hmac('sha256', $payload, $this->webhookSecret);
+        return hash_hmac('sha256', $payload, $secretOverride ?? $this->webhookSecret);
     }
 
     /**
      * Constant-time comparison of webhook signature to prevent timing attacks.
-     * Also validates timestamp tolerance against replays (default 300s / 5 minutes).
+     * Supports per-tenant webhook secrets (M18) and 300s timestamp replay defense.
      */
-    public function verifyWebhookSignature(string $rawPayload, ?string $signatureHeader): bool
+    public function verifyWebhookSignature(string $rawPayload, ?string $signatureHeader, ?string $secretOverride = null): bool
     {
         if (empty($signatureHeader)) {
             return false;
@@ -50,7 +54,7 @@ class PaymentGatewayService
             }
         }
 
-        $expected = $this->computeSignature($rawPayload);
+        $expected = $this->computeSignature($rawPayload, $secretOverride);
         return hash_equals($expected, $signature);
     }
 

@@ -52,11 +52,30 @@ class SettingsController extends Controller
             'service_charge' => ['nullable', 'numeric', 'min:0', 'max:30'],
             'is_qr_ordering_enabled' => ['nullable', 'boolean'],
             'session_timeout_minutes' => ['nullable', 'integer', 'min:15', 'max:720'],
-            'qr_base_url' => ['nullable', 'string', 'url'],
+            'qr_base_url' => ['nullable', 'string', 'url:http,https', function (string $attribute, mixed $value, \Closure $fail) {
+                if (is_string($value) && (str_contains($value, '169.254.169.254') || str_contains(strtolower($value), 'metadata.google.internal'))) {
+                    $fail("The {$attribute} cannot reference internal cloud metadata addresses.");
+                }
+            }],
         ]);
 
-        $branchId = $request->header('X-Branch-ID') ?? 1;
-        $branch = Branch::find($branchId) ?? Branch::first();
+        $tenant = \App\Tenancy\TenantContext::getTenant();
+        $user = $request->user();
+
+        if ($user && $tenant && !$user->hasRoleInTenant(['admin', 'manager'], $tenant->id)) {
+            return response()->json(['error' => 'Unauthorized. Admin or manager privileges required.'], 403);
+        }
+
+        $branchId = $request->header('X-Branch-ID');
+        $branchQuery = Branch::query();
+        if ($tenant) {
+            $branchQuery->where('tenant_id', $tenant->id);
+        }
+        $branch = $branchId ? $branchQuery->find($branchId) : $branchQuery->first();
+
+        if (!$branch) {
+            return response()->json(['error' => 'Branch not found or belongs to another organization.'], 404);
+        }
 
         if ($branch) {
             if (isset($validated['branch_name'])) $branch->name = $validated['branch_name'];

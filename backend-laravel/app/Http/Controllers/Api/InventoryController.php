@@ -17,7 +17,8 @@ class InventoryController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $tenantId = $request->header('X-Tenant-ID') ?? 1;
+        $tenant = \App\Tenancy\TenantContext::getTenant() ?? Tenant::first();
+        $tenantId = $tenant?->id ?? 1;
 
         $items = Inventory::where('tenant_id', $tenantId)->get()->map(function ($item) {
             $status = 'ok';
@@ -69,7 +70,8 @@ class InventoryController extends Controller
             'supplier' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $tenantId = $request->header('X-Tenant-ID') ?? 1;
+        $tenant = \App\Tenancy\TenantContext::getTenant() ?? Tenant::first();
+        $tenantId = $tenant?->id ?? 1;
 
         $item = Inventory::create([
             'tenant_id' => $tenantId,
@@ -147,7 +149,8 @@ class InventoryController extends Controller
             'quantity' => ['required', 'integer', 'min:1'],
         ]);
 
-        $tenantId = $request->header('X-Tenant-ID') ?? 1;
+        $tenant = \App\Tenancy\TenantContext::getTenant() ?? Tenant::first();
+        $tenantId = $tenant?->id ?? 1;
 
         // Common ingredient mapping for Café X signature dishes
         $recipeMap = [

@@ -1,7 +1,9 @@
 import { ReactNode } from "react";
 import { AppSidebar } from "./AppSidebar";
+import { useIdleTimeout } from "@/hooks/useIdleTimeout";
 
 export function AppLayout({ children }: { children: ReactNode }) {
+  useIdleTimeout();
   return (
     <div className="flex min-h-screen w-full bg-background">
       <AppSidebar />

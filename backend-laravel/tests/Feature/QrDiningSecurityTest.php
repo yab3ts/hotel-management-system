@@ -221,7 +221,8 @@ class QrDiningSecurityTest extends TestCase
         $oldToken = $table->qr_token;
 
         // Admin regenerates token
-        $regenRes = $this->postJson("/api/tables/{$table->id}/regenerate-qr");
+        $admin = User::where('email', 'admin@cafex.com')->first() ?? User::factory()->create();
+        $regenRes = $this->actingAs($admin, 'sanctum')->postJson("/api/tables/{$table->id}/regenerate-qr");
         $regenRes->assertStatus(200);
         $newToken = $regenRes->json('qr_token');
 
@@ -373,16 +374,17 @@ class QrDiningSecurityTest extends TestCase
                 'items' => [['menu_item_id' => $pizza->id, 'quantity' => 1]],
             ]);
         $session = TableSession::where('table_id', $table->id)->latest('opened_at')->first();
+        $staff = User::where('email', 'admin@cafex.com')->first();
 
         // 1. Unpaid balance without override -> 422
-        $failRes = $this->postJson("/api/waiter/sessions/{$session->id}/settle", [
+        $failRes = $this->actingAs($staff, 'sanctum')->postJson("/api/waiter/sessions/{$session->id}/settle", [
             'paid_amount' => 5.00, // Partial payment
             'manager_override' => false,
         ]);
         $failRes->assertStatus(422);
 
         // 2. Override with note too short (< 10 chars) -> 422 validation error
-        $shortNoteRes = $this->postJson("/api/waiter/sessions/{$session->id}/settle", [
+        $shortNoteRes = $this->actingAs($staff, 'sanctum')->postJson("/api/waiter/sessions/{$session->id}/settle", [
             'paid_amount' => 5.00,
             'manager_override' => true,
             'notes' => 'short',
@@ -390,7 +392,7 @@ class QrDiningSecurityTest extends TestCase
         $shortNoteRes->assertStatus(422);
 
         // 3. Override with valid detailed note -> 200 and audit log recorded
-        $okRes = $this->postJson("/api/waiter/sessions/{$session->id}/settle", [
+        $okRes = $this->actingAs($staff, 'sanctum')->postJson("/api/waiter/sessions/{$session->id}/settle", [
             'paid_amount' => 5.00,
             'manager_override' => true,
             'notes' => 'Customer complained about cold drink, 50% discount authorized by manager Luca',

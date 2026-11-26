@@ -21,7 +21,10 @@ class PaymentWebhookController extends Controller
         $rawPayload = $request->getContent();
         $signatureHeader = $request->header('X-Signature') ?? $request->header('Stripe-Signature');
 
-        if (!$this->gatewayService->verifyWebhookSignature($rawPayload, $signatureHeader)) {
+        $tenant = \App\Tenancy\TenantContext::getTenant();
+        $tenantSecret = !empty($tenant?->webhook_secret) ? $tenant->webhook_secret : null;
+
+        if (!$this->gatewayService->verifyWebhookSignature($rawPayload, $signatureHeader, $tenantSecret)) {
             return response()->json([
                 'error' => 'Invalid webhook signature. Request rejected.',
             ], 401);
@@ -32,6 +35,17 @@ class PaymentWebhookController extends Controller
             return response()->json([
                 'error' => 'Malformed JSON payload.',
             ], 400);
+        }
+
+        // M18: Ensure webhook event cannot cross into another tenant's session
+        $sessionId = $event['data']['object']['metadata']['session_id'] ?? $event['session_id'] ?? null;
+        if ($tenant && $sessionId) {
+            $session = \App\Models\TableSession::withoutGlobalScopes()->find($sessionId);
+            if ($session && (int) $session->tenant_id !== (int) $tenant->id) {
+                return response()->json([
+                    'error' => 'Cross-tenant webhook rejected.',
+                ], 403);
+            }
         }
 
         $result = $this->gatewayService->processEvent($event);

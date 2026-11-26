@@ -76,17 +76,22 @@ class MenuController extends Controller
         $validated = $request->validate([
             'category_id' => ['required', 'exists:menu_categories,id'],
             'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'price' => ['required', 'numeric', 'min:0'],
-            'image_url' => ['nullable', 'string'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'price' => ['required', 'numeric', 'min:0.01'],
+            'image_url' => ['nullable', 'string', new \App\Rules\SafeExternalUrl(true)],
             'prep_time_minutes' => ['nullable', 'integer', 'min:1'],
             'is_available' => ['nullable', 'boolean'],
             'is_spicy' => ['nullable', 'boolean'],
             'is_vegetarian' => ['nullable', 'boolean'],
             'is_vegan' => ['nullable', 'boolean'],
             'is_featured' => ['nullable', 'boolean'],
-            'calories' => ['nullable', 'integer'],
+            'calories' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        $validated['name'] = strip_tags($validated['name']);
+        if (!empty($validated['description'])) {
+            $validated['description'] = strip_tags($validated['description']);
+        }
 
         $item = MenuItem::create($validated);
 

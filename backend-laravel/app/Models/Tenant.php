@@ -14,7 +14,14 @@ class Tenant extends Model
     protected $fillable = [
         'name',
         'slug',
+        'logo_url',
         'domain',
+        'domain_verification_token',
+        'domain_verified_at',
+        'encryption_key_salt',
+        'webhook_secret',
+        'payout_iban',
+        'payout_account_name',
         'email',
         'phone',
         'address',
@@ -24,11 +31,21 @@ class Tenant extends Model
         'is_active',
     ];
 
+    protected $hidden = [
+        'encryption_key_salt',
+        'webhook_secret',
+        'domain_verification_token',
+        'payout_iban',
+    ];
+
     protected function casts(): array
     {
         return [
             'settings' => 'array',
             'is_active' => 'boolean',
+            'domain_verified_at' => 'datetime',
+            'webhook_secret' => 'encrypted',
+            'payout_iban' => 'encrypted',
         ];
     }
 

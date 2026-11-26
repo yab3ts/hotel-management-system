@@ -22,6 +22,10 @@ class AdminShowcaseAndLedgerTest extends TestCase
         parent::setUp();
         config(['app.demo_mode' => true]);
         $this->artisan('db:seed');
+        $admin = User::where('email', 'admin@cafex.com')->first();
+        if ($admin) {
+            $this->actingAs($admin, 'sanctum');
+        }
     }
 
     public function test_admin_can_retrieve_payments_and_stats(): void

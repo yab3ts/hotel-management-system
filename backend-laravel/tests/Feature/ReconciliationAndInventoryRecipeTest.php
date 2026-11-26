@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\RestaurantTable;
 use App\Models\TableSession;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -132,7 +133,15 @@ class ReconciliationAndInventoryRecipeTest extends TestCase
             'opened_at' => now(),
         ]);
 
-        $response = $this->getJson("/api/sessions/{$session->id}/receipt");
+        // Unauthorized IDOR attempt without guest secret or staff auth MUST fail (#19)
+        $this->getJson("/api/sessions/{$session->id}/receipt")->assertStatus(403);
+
+        // Query-string token MUST NOT be accepted (#72/#79)
+        $this->getJson("/api/sessions/{$session->id}/receipt?token={$session->session_token}")->assertStatus(403);
+
+        // Authorized via X-Session-Token header
+        $response = $this->withHeader('X-Session-Token', $session->session_token)
+            ->getJson("/api/sessions/{$session->id}/receipt");
         $response->assertStatus(200);
         $receipt = $response->json('receipt');
 
@@ -208,7 +217,15 @@ class ReconciliationAndInventoryRecipeTest extends TestCase
             'cost_per_unit' => 15.00,
         ]);
 
-        $resList = $this->withHeader('X-Tenant-ID', $tenant->id)->getJson('/api/inventory');
+        $chef = User::create([
+            'name' => 'Chef Marco',
+            'email' => 'chef_' . uniqid() . '@cafex.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'current_tenant_id' => $tenant->id,
+        ]);
+        $tenant->users()->attach($chef->id, ['role' => 'kitchen']);
+
+        $resList = $this->actingAs($chef, 'sanctum')->withHeader('X-Tenant-ID', $tenant->id)->getJson('/api/inventory');
         $resList->assertStatus(200);
         $this->assertCount(3, $resList->json('items'));
 

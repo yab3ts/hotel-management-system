@@ -23,6 +23,7 @@ class Reservation extends Model
         'reservation_date',
         'reservation_time',
         'status',
+        'is_vip',
         'special_requests',
     ];
 
@@ -31,6 +32,7 @@ class Reservation extends Model
         return [
             'guest_count' => 'integer',
             'reservation_date' => 'date',
+            'is_vip' => 'boolean',
         ];
     }
 

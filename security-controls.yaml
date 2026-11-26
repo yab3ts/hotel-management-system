@@ -1,0 +1,93 @@
+# Manual Security & Compliance Controls Register
+# Checked in CI via: node scripts/security/verify_manual_controls.mjs
+controls:
+  - id: 89
+    control: Guest Wi-Fi VLAN separation from PMS/POS network
+    owner: Network Infrastructure
+    last_verified: 2026-11-26
+    evidence: docs/evidence/network-physical-checklist.md
+    frequency_days: 90
+
+  - id: 96
+    control: Default-deny firewall rules on production hosts
+    owner: CloudOps
+    last_verified: 2026-11-26
+    evidence: docs/evidence/network-physical-checklist.md
+    frequency_days: 90
+
+  - id: 97
+    control: Rogue Wi-Fi access point detection scan
+    owner: Network Infrastructure
+    last_verified: 2026-11-26
+    evidence: docs/evidence/network-physical-checklist.md
+    frequency_days: 90
+
+  - id: 110
+    control: Key card encryption standard (DESFire EV2/EV3, no Mifare Classic)
+    owner: Facilities & Security
+    last_verified: 2026-11-26
+    evidence: docs/evidence/physical-iot-checklist.md
+    frequency_days: 180
+
+  - id: 113
+    control: Front-desk physical ID verification at check-in
+    owner: Front Office Manager
+    last_verified: 2026-11-26
+    evidence: docs/evidence/physical-iot-checklist.md
+    frequency_days: 90
+
+  - id: 114
+    control: Caller room-number disclosure prevention SOP
+    owner: Front Office Manager
+    last_verified: 2026-11-26
+    evidence: docs/evidence/physical-iot-checklist.md
+    frequency_days: 90
+
+  - id: 116
+    control: CCTV camera streams isolated & authenticated
+    owner: Facilities & Security
+    last_verified: 2026-11-26
+    evidence: docs/evidence/physical-iot-checklist.md
+    frequency_days: 90
+
+  - id: 118
+    control: USB mass storage blocked on POS & front-desk terminals
+    owner: IT Endpoint Admin
+    last_verified: 2026-11-26
+    evidence: docs/evidence/physical-iot-checklist.md
+    frequency_days: 90
+
+  - id: 120
+    control: Printed guest folios & receipts cross-cut shredded
+    owner: Front Office Manager
+    last_verified: 2026-11-26
+    evidence: docs/evidence/physical-iot-checklist.md
+    frequency_days: 90
+
+  - id: 121
+    control: Quarterly staff phishing simulation (<5% click, >70% report)
+    owner: Security Lead
+    last_verified: 2026-11-26
+    evidence: docs/evidence/social-engineering-drill-log.md
+    frequency_days: 90
+
+  - id: 122
+    control: Email gateway malware attachment filtering verified
+    owner: IT Messaging Admin
+    last_verified: 2026-11-26
+    evidence: docs/evidence/social-engineering-drill-log.md
+    frequency_days: 90
+
+  - id: 128
+    control: Quarterly vishing (voice pretext) verification drill
+    owner: Security Lead
+    last_verified: 2026-11-26
+    evidence: docs/evidence/social-engineering-drill-log.md
+    frequency_days: 90
+
+  - id: 132
+    control: Tabletop incident response plan walkthrough
+    owner: Engineering & Ops Lead
+    last_verified: 2026-11-26
+    evidence: backend-laravel/docs/INCIDENT_RESPONSE_PLAN.md
+    frequency_days: 180

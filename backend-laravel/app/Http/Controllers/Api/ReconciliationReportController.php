@@ -100,9 +100,24 @@ class ReconciliationReportController extends Controller
 
     /**
      * Generate Tax-Compliant Customer Receipt for an active or completed table session.
+     * Protected against IDOR (#19) and Cross-Tenant Leaks (M1).
      */
     public function sessionReceipt(Request $request, TableSession $session): JsonResponse
     {
+        $user = $request->user('sanctum') ?? $request->user();
+        $guestSecret = $request->header('X-Guest-Secret');
+        $sessionToken = $request->header('X-Session-Token');
+
+        $isAuthorizedStaff = $user && $user->tenants()->where('tenants.id', $session->tenant_id)->exists();
+        $isAuthorizedGuest = $guestSecret && $session->guests()->where('guest_secret', $guestSecret)->exists();
+        $hasValidSessionToken = $sessionToken && hash_equals((string) $session->session_token, (string) $sessionToken);
+
+        if (!$isAuthorizedStaff && !$isAuthorizedGuest && !$hasValidSessionToken) {
+            return response()->json([
+                'error' => 'Forbidden: Valid guest session secret, session token, or tenant staff credentials required to view this receipt.',
+            ], 403);
+        }
+
         $session->load(['table', 'branch.tenant', 'orders.items', 'payments']);
 
         $branch = $session->branch;

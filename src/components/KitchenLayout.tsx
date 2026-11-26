@@ -4,6 +4,7 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChefHat, LayoutDashboard, ShoppingCart, Bell, LogOut, Menu, ChevronLeft, ChevronRight, UtensilsCrossed, PlusCircle, ClipboardList, Monitor } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { useIdleTimeout } from "@/hooks/useIdleTimeout";
 
 const navItems = [
   { title: "Kitchen Dashboard", icon: LayoutDashboard, path: "/kitchen" },
@@ -86,6 +87,7 @@ function KitchenSidebar() {
 }
 
 export function KitchenLayout({ children }: { children: ReactNode }) {
+  useIdleTimeout();
   return (
     <div className="flex min-h-screen w-full bg-background">
       <KitchenSidebar />

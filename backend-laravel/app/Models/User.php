@@ -21,11 +21,23 @@ class User extends Authenticatable
         'avatar_url',
         'current_tenant_id',
         'branch_id',
+        'is_active',
+        'must_change_password',
+        'mfa_enabled',
+        'mfa_secret',
+        'mfa_recovery_codes',
+        'is_super_admin',
+        'is_vip',
+        'impersonation_consent_token',
+        'impersonation_consented_until',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'mfa_secret',
+        'mfa_recovery_codes',
+        'impersonation_consent_token',
     ];
 
     protected function casts(): array
@@ -33,6 +45,14 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
+            'mfa_enabled' => 'boolean',
+            'mfa_secret' => 'encrypted',
+            'mfa_recovery_codes' => 'encrypted:array',
+            'is_super_admin' => 'boolean',
+            'is_vip' => 'boolean',
+            'impersonation_consented_until' => 'datetime',
         ];
     }
 

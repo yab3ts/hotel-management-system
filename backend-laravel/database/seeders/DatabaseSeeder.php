@@ -31,11 +31,13 @@ class DatabaseSeeder extends Seeder
             throw new \RuntimeException("Seeding demo accounts and test data is strictly forbidden in production environments unless DEMO_MODE=true is set.");
         }
 
-        // 1. Create Tenant (Restaurant Brand)
+        // 1. Create Tenant 1 (Café X) with per-tenant encryption salt & webhook secret
         $tenant = Tenant::create([
             'name' => 'Café X Enterprise Group',
             'slug' => 'cafex',
             'logo_url' => '/logo.svg',
+            'encryption_key_salt' => bin2hex(random_bytes(16)),
+            'webhook_secret' => 'cafex_whsec_' . bin2hex(random_bytes(16)),
             'is_active' => true,
         ]);
 
@@ -250,6 +252,100 @@ class DatabaseSeeder extends Seeder
             ],
             'ip_address' => '127.0.0.1',
             'created_at' => now()->subMinutes(40),
+        ]);
+
+        // 8. Seed VIP reservation in Tenant 1 (#30)
+        \App\Models\Reservation::create([
+            'tenant_id' => $tenant->id,
+            'reservation_number' => 'VIP-001',
+            'guest_name' => 'Elena Rossi (VIP)',
+            'guest_email' => 'elena.vip@celebrity.example',
+            'guest_count' => 2,
+            'reservation_date' => now()->addDays(2)->toDateString(),
+            'reservation_time' => '20:30',
+            'status' => 'confirmed',
+            'is_vip' => true,
+            'special_requests' => 'Private corner booth',
+        ]);
+
+        // 9. Seed Tenant 2 (Grand Hotel Roma) + isolated data + support super-admin for multi-tenant demos
+        $tenant2 = Tenant::create([
+            'name' => 'Grand Hotel Roma',
+            'slug' => 'roma',
+            'logo_url' => '/logo.svg',
+            'encryption_key_salt' => bin2hex(random_bytes(16)),
+            'webhook_secret' => 'roma_whsec_' . bin2hex(random_bytes(16)),
+            'is_active' => true,
+        ]);
+
+        $romaBranch = Branch::create([
+            'tenant_id' => $tenant2->id,
+            'name' => 'Grand Hotel Roma Rooftop',
+            'code' => 'GHR-01',
+            'slug' => 'roma-rooftop',
+            'phone' => '+39 06 5550199',
+            'address' => 'Via Veneto 88, Rome, Italy',
+            'currency' => 'EUR',
+            'tax_rate' => 10.00,
+            'service_charge' => 5.00,
+            'is_qr_ordering_enabled' => true,
+        ]);
+
+        $romaAdmin = User::create([
+            'name' => 'Roma Administrator',
+            'email' => 'admin@roma-hotel.com',
+            'password' => Hash::make('RomaPass123!'),
+            'current_tenant_id' => $tenant2->id,
+            'branch_id' => $romaBranch->id,
+            'is_active' => true,
+        ]);
+        $tenant2->users()->attach($romaAdmin->id, ['role' => 'admin']);
+
+        $supportUser = User::create([
+            'name' => 'Tableza Platform Support',
+            'email' => 'support@tableza.com',
+            'password' => Hash::make('SupportPass123!'),
+            'current_tenant_id' => $tenant->id,
+            'is_super_admin' => true,
+            'is_active' => true,
+        ]);
+        $tenant->users()->attach($supportUser->id, ['role' => 'customer']);
+
+        RestaurantTable::create([
+            'tenant_id' => $tenant2->id,
+            'branch_id' => $romaBranch->id,
+            'table_number' => 'R-101',
+            'name' => 'Rooftop Suite 101',
+            'capacity' => 4,
+            'zone' => 'Terrace',
+            'status' => 'available',
+            'qr_token' => 'roma_' . bin2hex(random_bytes(12)),
+        ]);
+
+        $romaCat = MenuCategory::create([
+            'tenant_id' => $tenant2->id,
+            'name' => 'Roma Specials',
+            'slug' => 'roma-specials',
+        ]);
+
+        MenuItem::create([
+            'tenant_id' => $tenant2->id,
+            'category_id' => $romaCat->id,
+            'name' => 'Cacio e Pepe',
+            'price' => 24.00,
+            'is_available' => true,
+        ]);
+
+        \App\Models\Reservation::create([
+            'tenant_id' => $tenant2->id,
+            'reservation_number' => 'ROMA-VIP-1',
+            'guest_name' => 'Marco Bellini (VIP)',
+            'guest_email' => 'marco.vip@roma.example',
+            'guest_count' => 4,
+            'reservation_date' => now()->addDays(3)->toDateString(),
+            'reservation_time' => '21:00',
+            'status' => 'confirmed',
+            'is_vip' => true,
         ]);
     }
 

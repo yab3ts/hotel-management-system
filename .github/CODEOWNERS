@@ -1,0 +1,7 @@
+# GitHub Code Owners for Sensitive Compliance & Security Artifacts
+# Changes to these paths require explicit sign-off from designated security & infra leads.
+
+security-controls.yaml @security-officer @compliance-lead
+docs/evidence/ @security-officer @infra-lead
+scripts/security/ @security-officer
+.github/workflows/ @security-officer @devops-lead

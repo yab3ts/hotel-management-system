@@ -7,6 +7,7 @@ use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\RestaurantTable;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -51,6 +52,24 @@ class FullDemoFlow3xConsecutiveTest extends TestCase
             'price' => 20.00,
             'is_available' => true,
         ]);
+
+        $staff = User::create([
+            'name' => 'Luca Waiter',
+            'email' => 'luca_waiter_' . uniqid() . '@cafex.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'current_tenant_id' => $tenant->id,
+            'branch_id' => $branch->id,
+        ]);
+        $tenant->users()->attach($staff->id, ['role' => 'waiter']);
+        $tenant->users()->attach($staff->id, ['role' => 'kitchen']);
+
+        $admin = User::create([
+            'name' => 'Demo Admin',
+            'email' => 'admin_' . uniqid() . '@cafex.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'current_tenant_id' => $tenant->id,
+        ]);
+        $tenant->users()->attach($admin->id, ['role' => 'admin']);
 
         // Run the complete 9-step flow 3 times consecutively on distinct tables
         for ($run = 1; $run <= 3; $run++) {
@@ -119,22 +138,22 @@ class FullDemoFlow3xConsecutiveTest extends TestCase
 
             // STEP 4: Kitchen Bump Bar progresses orders: placed -> accepted -> preparing -> ready
             // Order 1 progression
-            $this->patchJson("/api/orders/{$order1Id}/status", ['status' => 'accepted'])->assertStatus(200);
-            $this->patchJson("/api/orders/{$order1Id}/status", ['status' => 'preparing'])->assertStatus(200);
-            $this->patchJson("/api/orders/{$order1Id}/status", ['status' => 'ready'])->assertStatus(200);
+            $this->actingAs($staff, 'sanctum')->patchJson("/api/orders/{$order1Id}/status", ['status' => 'accepted'])->assertStatus(200);
+            $this->actingAs($staff, 'sanctum')->patchJson("/api/orders/{$order1Id}/status", ['status' => 'preparing'])->assertStatus(200);
+            $this->actingAs($staff, 'sanctum')->patchJson("/api/orders/{$order1Id}/status", ['status' => 'ready'])->assertStatus(200);
 
             // Order 2 progression
-            $this->patchJson("/api/orders/{$order2Id}/status", ['status' => 'accepted'])->assertStatus(200);
-            $this->patchJson("/api/orders/{$order2Id}/status", ['status' => 'preparing'])->assertStatus(200);
-            $this->patchJson("/api/orders/{$order2Id}/status", ['status' => 'ready'])->assertStatus(200);
+            $this->actingAs($staff, 'sanctum')->patchJson("/api/orders/{$order2Id}/status", ['status' => 'accepted'])->assertStatus(200);
+            $this->actingAs($staff, 'sanctum')->patchJson("/api/orders/{$order2Id}/status", ['status' => 'preparing'])->assertStatus(200);
+            $this->actingAs($staff, 'sanctum')->patchJson("/api/orders/{$order2Id}/status", ['status' => 'ready'])->assertStatus(200);
 
             // Customer tracker sees 'ready'
             $resTabReady = $this->getJson("/api/t/{$token}/tab");
             $this->assertEquals('ready', $resTabReady->json('orders.0.status'));
 
             // STEP 5: Waiter serves orders
-            $this->patchJson("/api/waiter/orders/{$order1Id}/serve")->assertStatus(200);
-            $this->patchJson("/api/waiter/orders/{$order2Id}/serve")->assertStatus(200);
+            $this->actingAs($staff, 'sanctum')->patchJson("/api/waiter/orders/{$order1Id}/serve")->assertStatus(200);
+            $this->actingAs($staff, 'sanctum')->patchJson("/api/waiter/orders/{$order2Id}/serve")->assertStatus(200);
 
             // STEP 6: Guest calls waiter & requests bill
             $resCall = $this->withHeader('X-Guest-Secret', $secret1)->postJson("/api/t/{$token}/call-waiter");
@@ -166,18 +185,18 @@ class FullDemoFlow3xConsecutiveTest extends TestCase
 
             // STEP 8: Session is now fully paid (paid_amount == 115.00), table turnover: cleaning -> free
             $sessionId = $resTab->json('session.id');
-            $this->postJson("/api/waiter/sessions/{$sessionId}/settle", ['notes' => 'Settled in full'])->assertStatus(200);
+            $this->actingAs($staff, 'sanctum')->postJson("/api/waiter/sessions/{$sessionId}/settle", ['notes' => 'Settled in full'])->assertStatus(200);
 
             $this->assertEquals('cleaning', $table->fresh()->status);
-            $this->patchJson("/api/waiter/tables/{$table->id}/clean")->assertStatus(200);
+            $this->actingAs($staff, 'sanctum')->patchJson("/api/waiter/tables/{$table->id}/clean")->assertStatus(200);
             $this->assertEquals('available', $table->fresh()->status);
 
             // STEP 9: Admin sees revenue, orders, and audit trail
-            $resStats = $this->withHeader('X-Tenant-ID', $tenant->id)->getJson('/api/dashboard/stats');
+            $resStats = $this->actingAs($admin, 'sanctum')->withHeader('X-Tenant-ID', $tenant->id)->getJson('/api/dashboard/stats');
             $resStats->assertStatus(200);
             $this->assertGreaterThanOrEqual(115.00 * $run, (float) $resStats->json('stats.net_revenue'));
 
-            $resAudit = $this->withHeader('X-Tenant-ID', $tenant->id)->getJson('/api/audit-logs');
+            $resAudit = $this->actingAs($admin, 'sanctum')->withHeader('X-Tenant-ID', $tenant->id)->getJson('/api/audit-logs');
             $resAudit->assertStatus(200);
             $this->assertNotEmpty($resAudit->json());
         }

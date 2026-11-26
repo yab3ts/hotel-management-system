@@ -113,6 +113,38 @@ class PaymentController extends Controller
                 ], 422);
             }
 
+            // Security (#123 CEO Fraud Prevention): High-value refunds (>= 500) require a second administrator approval
+            if ($refundAmountPositive >= 500.00) {
+                $approvalId = $request->input('approval_id');
+                $approval = $approvalId
+                    ? \App\Models\ApprovalRequest::where('id', $approvalId)
+                        ->where('status', 'executed')
+                        ->where('action', 'high_value_refund')
+                        ->whereNotNull('approved_by')
+                        ->first()
+                    : null;
+
+                if (!$approval || (int) $approval->approved_by === (int) $request->user()?->id) {
+                    $pending = \App\Models\ApprovalRequest::create([
+                        'tenant_id' => $lockedPayment->tenant_id,
+                        'requested_by' => $request->user()?->id,
+                        'action' => 'high_value_refund',
+                        'payload' => [
+                            'payment_id' => $lockedPayment->id,
+                            'amount' => $refundAmountPositive,
+                            'reason' => $validated['reason'],
+                        ],
+                        'status' => 'pending',
+                    ]);
+
+                    return response()->json([
+                        'error' => 'Dual-approver confirmation required for high-value refunds (>= 500).',
+                        'approval_required' => true,
+                        'approval_id' => $pending->id,
+                    ], 403);
+                }
+            }
+
             $negativeRefundAmount = -abs($refundAmountPositive);
 
             // 5. Create immutable refund ledger row

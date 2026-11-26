@@ -43,6 +43,15 @@ return [
 
     'demo_mode' => (bool) env('DEMO_MODE', false),
 
+    'enforce_admin_mfa' => (bool) env('ENFORCE_ADMIN_MFA', false),
+
+    'hibp_check_enabled' => (bool) env('HIBP_CHECK_ENABLED', false),
+
+    'wildcard_domains' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', env('WILDCARD_BASE_DOMAINS', 'tableza.app,tableza.vercel.app,localhost'))
+    ))),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL

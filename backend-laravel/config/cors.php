@@ -19,9 +19,16 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', env('ALLOWED_ORIGINS', 'http://localhost:5174,http://localhost:5173,http://127.0.0.1:5174,http://127.0.0.1:5173,https://tableza.vercel.app'))
+    ))),
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '/^https:\/\/[a-z0-9-]+\.tableza\.vercel\.app$/',
+        '/^https:\/\/[a-z0-9-]+\.tableza\.app$/',
+        '/^http:\/\/[a-z0-9-]+\.localhost(:[0-9]+)?$/',
+    ],
 
     'allowed_headers' => ['*'],
 

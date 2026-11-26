@@ -1,7 +1,9 @@
 import { ReactNode } from "react";
 import { AdminSidebar } from "./AdminSidebar";
+import { useIdleTimeout } from "@/hooks/useIdleTimeout";
 
 export function AdminLayout({ children }: { children: ReactNode }) {
+  useIdleTimeout();
   return (
     <div className="flex min-h-screen w-full bg-background">
       <AdminSidebar />
